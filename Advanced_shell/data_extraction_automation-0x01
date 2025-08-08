@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Extract fields with jq
+name=$(jq -r '.name' data.json | sed 's/^./\u&/')         # Capitalize first letter
+height=$(jq -r '.height' data.json)                      # height in decimeters
+weight=$(jq -r '.weight' data.json)                      # weight in hectograms
+type=$(jq -r '.types[0].type.name' data.json | sed 's/^./\u&/')  # capitalize first letter of first type
+
+# Convert height to meters (decimeters to meters)
+height_m=$(echo "$height" | awk '{printf "%.1f", $1 / 10}')
+
+# Convert weight to kilograms (hectograms to kilograms)
+weight_kg=$(echo "$weight" | awk '{printf "%d", $1 / 10}')
+
+# Output formatted sentence
+echo "$name is of type $type, weighs ${weight_kg}kg, and is ${height_m}m tall."
+

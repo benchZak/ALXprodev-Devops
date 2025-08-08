@@ -1,5 +1,5 @@
 #!/bin/bash
-# Parallel Pokémon data fetching
+# Parallel Pokémon data fetching with process management
 
 POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 BASE_URL="https://pokeapi.co/api/v2/pokemon"
@@ -12,7 +12,7 @@ mkdir -p "$OUTPUT_DIR"
 fetch_pokemon() {
     p="$1"
     echo "Fetching data for $p..."
-    STATUS_CODE=$(curl -s -o "$OUTPUT_DIR/$p.json" -w "%{http_code}" "$BASE_URL/$p")
+    STATUS_CODE=$(curl -s --max-time 10 -o "$OUTPUT_DIR/$p.json" -w "%{http_code}" "$BASE_URL/$p")
     if [ "$STATUS_CODE" -eq 200 ]; then
         echo "Saved data to $OUTPUT_DIR/$p.json ✅"
     else
@@ -21,12 +21,33 @@ fetch_pokemon() {
     fi
 }
 
-# Run each fetch in the background
+# Run each fetch in the background and keep track of PIDs
+pids=()
 for p in "${POKEMON_LIST[@]}"; do
     fetch_pokemon "$p" &
+    pids+=($!)
 done
 
-# Wait for all background jobs to finish
-wait
-echo "All Pokémon fetched."
+# Wait for all processes, but kill any that take too long
+TIMEOUT=15
+START_TIME=$(date +%s)
+
+while [ ${#pids[@]} -gt 0 ]; do
+    for i in "${!pids[@]}"; do
+        if ! kill -0 "${pids[i]}" 2>/dev/null; then
+            unset 'pids[i]' # process finished
+        else
+            # Check for timeout
+            NOW=$(date +%s)
+            if (( NOW - START_TIME > TIMEOUT )); then
+                echo "Process ${pids[i]} exceeded time limit — killing..."
+                kill "${pids[i]}"
+                unset 'pids[i]'
+            fi
+        fi
+    done
+    sleep 1
+done
+
+echo "All Pokémon fetched (or killed if timed out)."
 

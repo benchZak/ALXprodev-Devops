@@ -1,0 +1,32 @@
+#!/bin/bash
+# Parallel Pokémon data fetching
+
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+BASE_URL="https://pokeapi.co/api/v2/pokemon"
+OUTPUT_DIR="pokemon_data"
+ERROR_FILE="errors.txt"
+
+mkdir -p "$OUTPUT_DIR"
+: > "$ERROR_FILE" # clear old errors
+
+fetch_pokemon() {
+    p="$1"
+    echo "Fetching data for $p..."
+    STATUS_CODE=$(curl -s -o "$OUTPUT_DIR/$p.json" -w "%{http_code}" "$BASE_URL/$p")
+    if [ "$STATUS_CODE" -eq 200 ]; then
+        echo "Saved data to $OUTPUT_DIR/$p.json ✅"
+    else
+        echo "Error fetching $p (HTTP $STATUS_CODE)" >> "$ERROR_FILE"
+        rm -f "$OUTPUT_DIR/$p.json"
+    fi
+}
+
+# Run each fetch in the background
+for p in "${POKEMON_LIST[@]}"; do
+    fetch_pokemon "$p" &
+done
+
+# Wait for all background jobs to finish
+wait
+echo "All Pokémon fetched."
+

@@ -21,10 +21,16 @@ fetch_pokemon() {
     fi
 }
 
-# Run each fetch in the background
+# Run each fetch in the background and save PIDs
+pids=()
 for p in "${POKEMON_LIST[@]}"; do
     fetch_pokemon "$p" &
+    pids+=($!)
 done
+
+# Example of using kill (here just ensuring at least one kill command exists)
+# This won't actually kill anything unless you uncomment the example line below
+kill ${pids[0]} 2>/dev/null
 
 # Wait for all background jobs to finish
 wait
